@@ -586,3 +586,131 @@ int errInvCov (double c00, double c11, double c01, double *err0, double *err1)
 
 	return 0;
 }
+
+int covarianceJ (void *param, double phase, double dm, double *errPhase, double *errDm)
+{
+	int nchn = ((params *)param)->nchn;
+	int num = ((params *)param)->num;
+	double psrFreq = ((params *)param)->psrFreq;
+	double *nfreq = ((params *)param)->nfreq;
+	double *rms = ((params *)param)->rms;
+	double **a_s = ((params *)param)->a_s;
+	double **a_p = ((params *)param)->a_p;
+	double **p_s = ((params *)param)->p_s;
+	double **p_p = ((params *)param)->p_p;
+	double freqRef;
+
+	freqRef = ((params *)param)->freqRef;
+
+	int i,j,k;
+
+	double s;
+	double c00,c11,c01;
+	double c001,c111,c011;
+	double c0011,c1111,c0111;
+
+	double A = 2.0*M_PI*K*psrFreq;
+
+	double jitter[nchn][nchn];
+	for (i = 0; i < num; i++)
+	{
+		for (j = 0; j < nchn; j++)
+		{
+			if (i == j)
+			{
+				jitter[i][j] = 1.0;
+			}
+			else
+			{
+				jitter[i][j] = 0.1;
+			}
+		}
+	}
+
+	double phaseNchnJ, phaseNchnK;
+	c00 = 0.0;
+	c11 = 0.0;
+	c01 = 0.0;
+	for (i = 0; i < num; i++)
+	{
+		c001 = 0.0;
+		c111 = 0.0;
+		c011 = 0.0;
+		for (j = 0; j < nchn; j++)
+		{
+			c0011 = 0.0;
+			c1111 = 0.0;
+			c0111 = 0.0;
+			phaseNchnJ = phase - (A*dm)*(1.0/(nfreq[j]*nfreq[j])-1.0/(freqRef*freqRef));
+			for (k = 0; k < nchn; k++)
+			{
+				phaseNchnK = phase - (A*dm)*(1.0/(nfreq[k]*nfreq[k])-1.0/(freqRef*freqRef));
+
+				c0011 += ;
+				c1111 += ;
+				c0111 += ;
+			}
+			c001 += c0011;
+			c111 += c1111;
+			c011 += c0111;
+		}
+		c00 += c001;
+		c11 += c111;
+		c01 += c011;
+	}
+
+	//printf ("A: %lf\n", A);
+	c00 = 0.0;
+	c11 = 0.0;
+	c01 = 0.0;
+	for (i = 0; i < nchn; i++)
+	{
+		s = 0.0;
+		c001 = 0.0;
+		c002 = 0.0;
+		c003 = 0.0;
+		c111 = 0.0;
+		c112 = 0.0;
+		c121 = 0.0;
+		//printf ("nchn freq: %lf\n",nfreq[i]);
+		phaseNchn = phase - (A*dm)*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef));
+		//phaseNchn = phase - (2.0*3.1415926)*(K*dm*psrFreq)*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef));
+		//printf ("phaseNchn: %lf %lf\n", nfreq[i], phaseNchn);
+		//printf ("phaseNchn: %lf %.10lf\n", nfreq[i], (1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef)));
+		for (j = 0; j < num; j++)
+		{
+			s += a_s[i][j]*a_s[i][j];
+			c001 += a_s[i][j]*a_p[i][j]*cos(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+			c002 += (j+1)*a_s[i][j]*a_p[i][j]*sin(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+			c003 += (j+1)*(j+1)*a_s[i][j]*a_p[i][j]*cos(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+
+			c111 += ((j+1)*A*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef)))*a_s[i][j]*a_p[i][j]*sin(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+			//c111 += ((j+1)*K*psrFreq*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef)))*a_s[i][j]*a_p[i][j]*sin(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+			c112 += pow(((j+1)*A*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef))),2.0)*a_s[i][j]*a_p[i][j]*cos(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+			//c112 += pow(((j+1)*K*psrFreq*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef))),2.0)*a_s[i][j]*a_p[i][j]*cos(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+
+			c121 += ((j+1)*(j+1)*A*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef)))*a_s[i][j]*a_p[i][j]*cos(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+			//c121 += ((j+1)*(j+1)*K*psrFreq*(1.0/(nfreq[i]*nfreq[i])-1.0/(freqRef*freqRef)))*a_s[i][j]*a_p[i][j]*cos(p_s[i][j]-p_p[i][j]+(j+1)*phaseNchn);
+		//printf ("%lf %lf\n", a_s[i], p_s[i]);
+		}
+		c00 += 2.0*((-c002*c002+c001*c003)/s)/(rms[i]*rms[i]);
+		c11 += 2.0*((-c111*c111+c001*c112)/s)/(rms[i]*rms[i]);
+		c01 += 2.0*((-c111*c002+c001*c121)/s)/(rms[i]*rms[i]);
+		//nu0 += (1.0/(nfreq[i]*nfreq[i]))*((-c002*c002+c001*c003)/s)/(rms[i]*rms[i]);
+	}
+
+	printf ("c00: %lf; c11: %lf; c12: %lf\n", c00, c11, c01);
+	double err0, err1;
+	errInvCov (c00, c11, c01, &err0, &err1);
+	(*errPhase) = err0;
+	(*errDm) = err1;
+	//(*errPhase) = sqrt(2.0/fabs(c00));
+	//(*errDm) = sqrt(2.0/fabs(c11));
+
+	//printf ("phase error: %lf; DM error: %lf\n",  ((err0/3.1415926)/(psrFreq*2.0))*1.0e+6, err1);
+	//printf ("phase error: %lf; DM error: %lf\n",  ((sqrt(2.0/fabs(c00))/3.1415926)/(psrFreq*2.0))*1.0e+6, sqrt(2.0/fabs(c11)));
+	//printf ("freqRef: %lf\n", freqRef);
+	
+	return 0;
+}
+
